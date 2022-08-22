@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "adb.h"
-#include "hid_keyboard.h"
+//#include "hid_keyboard.h"
 #include "adb_structures.h"
 
 #define ADB_POLL_DELAY 5

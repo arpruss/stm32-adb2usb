@@ -3,11 +3,16 @@
 
 #include <Arduino.h>
 
-#define ADB_DATA_PIN        PB4
+#include "dwt.h"
+
+#define us_to_cycles(cycles) (uint32_t)((uint64_t)(cycles) * SystemCoreClock / 1000000ul)
+#define delay_microseconds(us) do { DWT->CYCCNT = 0; while (DWT->CYCCNT < us_to_cycles(us)); } while(0)
+
+#define ADB_DATA_PIN        PB13
 #define ADB_DATA_PORT       GPIOB
-#define ADB_DATA_PIN_NO     4
-#define ADB_WRITE(bit)      digitalWrite(ADB_DATA_PIN, bit)
-#define ADB_READ()          (digitalRead(ADB_DATA_PIN))
+#define ADB_DATA_PIN_NO     13
+#define ADB_WRITE(bit)      gpio_write_bit(ADB_DATA_PORT, ADB_DATA_PIN_NO, (bit))
+#define ADB_READ()          (0!=gpio_read_bit(ADB_DATA_PORT, ADB_DATA_PIN_NO))
 
 #define ADB_ADDRESS(addr)   (addr << 4)
 #define ADB_REGISTER(reg)   (reg)
@@ -23,21 +28,21 @@
 // Reset: signal low for 3 ms.
 static void adb_reset() {
     ADB_WRITE(LOW);
-    delayMicroseconds(3000);
+    delay_microseconds(3000);
     ADB_WRITE(HIGH);
 }
 
 // Attention: signal low for 800 μs.
 static void adb_attention() {
     ADB_WRITE(LOW);
-    delayMicroseconds(800);
+    delay_microseconds(800);
     ADB_WRITE(HIGH);
 }
 
 // Sync: signal high for 70 μs.
 static void adb_sync() {
     ADB_WRITE(HIGH);
-    delayMicroseconds(70);
+    delay_microseconds(70);
     ADB_WRITE(LOW);
 }
 
@@ -47,17 +52,17 @@ static void adb_sync() {
 static void adb_write_bit(uint16_t bit) {
     if (bit) { // '1' bit
         ADB_WRITE(LOW);
-        delayMicroseconds(35);
+        delay_microseconds(35);
         
         ADB_WRITE(HIGH);
-        delayMicroseconds(65);
+        delay_microseconds(65);
     }
     else { // '0' bit
         ADB_WRITE(LOW);
-        delayMicroseconds(65);
+        delay_microseconds(65);
         
         ADB_WRITE(HIGH);
-        delayMicroseconds(35);
+        delay_microseconds(35);
     }
 }
 
@@ -88,7 +93,7 @@ static bool adb_stop_bit_srq_listen() {
     // TODO: Properly handle SRQ, currently waits it out:
     auto time_end_stop_bit = micros();
     while (ADB_READ() == LOW && micros() - time_end_stop_bit < 300 - 35) { // TODO: does it make sense to timeout?
-        delayMicroseconds(5);
+        delay_microseconds(5);
     }
     return false;
 }
@@ -106,10 +111,10 @@ void adb_write_command(uint8_t command_byte) {
 // Returns: true if the response is starting, false if timeout
 static bool adb_wait_tlt(bool response_expected) {
     ADB_WRITE(HIGH);
-    delayMicroseconds(140);
+    delay_microseconds(140);
     uint8_t i = 0;
     while (ADB_READ() == HIGH && i < 240 && response_expected) {
-        delayMicroseconds(1);
+        delay_microseconds(1);
         i++;
     }
     
@@ -162,6 +167,9 @@ bool adb_read_data_packet(uint16_t* buffer, uint8_t length)
 }
 
 void adb_init() {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= 1;
+
     pinMode(ADB_DATA_PIN, OUTPUT_OPEN_DRAIN);
     ADB_WRITE(HIGH);
 
