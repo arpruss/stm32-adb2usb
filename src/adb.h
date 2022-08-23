@@ -91,10 +91,8 @@ static void adb_write_data_packet(uint16_t bits, uint8_t length) {
 static bool adb_stop_bit_srq_listen() {
     adb_write_bit(0);
     // TODO: Properly handle SRQ, currently waits it out:
-    auto time_end_stop_bit = micros();
-    while (ADB_READ() == LOW && micros() - time_end_stop_bit < 300 - 35) { // TODO: does it make sense to timeout?
-        delay_microseconds(5);
-    }
+    DWT->CYCCNT = 0;
+    while (ADB_READ() == LOW && DWT->CYCCNT < us_to_cycles(300 - 35)) ; 
     return false;
 }
 
@@ -112,34 +110,34 @@ void adb_write_command(uint8_t command_byte) {
 static bool adb_wait_tlt(bool response_expected) {
     ADB_WRITE(HIGH);
     delay_microseconds(140);
-    uint8_t i = 0;
-    while (ADB_READ() == HIGH && i < 240 && response_expected) {
-        delay_microseconds(1);
-        i++;
-    }
+
+    DWT->CYCCNT = 0;    
+    while (ADB_READ() == HIGH && DWT->CYCCNT < us_to_cycles(260) && response_expected) ;
     
     return true;
 }
 
 // Read a single bit from the bus.
 static uint8_t adb_read_bit() {
-    auto time_start = micros();
+    DWT->CYCCNT = 0;
     
     while (ADB_READ() == LOW) {
         // devices need to stick to 30% precision, 65 * 1.3 = 85 μs
         // if this time is exceeded assume timeout
-        if (micros() - time_start > 85)
+        if (DWT->CYCCNT > us_to_cycles(85))
             return ADB_BIT_ERROR;
     }
-    auto low_time = micros() - time_start;
+    auto low_time = DWT->CYCCNT;
+
+    DWT->CYCCNT = 0;
 
     while (ADB_READ() == HIGH) {
         // devices need to stick to 30% precision, 65 * 1.3 = 85 μs
         // if this time is exceeded assume timeout
-        if (micros() - time_start - low_time > 85)
+        if (DWT->CYCCNT > us_to_cycles(85))
             return ADB_BIT_ERROR;
     }
-    auto high_time = micros() - time_start - low_time;
+    auto high_time = DWT->CYCCNT;
     
     return (low_time < high_time) ? 0x1 : 0x0;
 }
@@ -179,4 +177,3 @@ void adb_init() {
 }
 
 #endif
-
