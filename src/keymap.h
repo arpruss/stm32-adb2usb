@@ -4,6 +4,7 @@
 
 #define KEY_CAPSLOCK 0x39
 
+// problems: a, f10-f12, kp=
 static uint16_t adb_keycode_to_arduino_hid[128] = {
     /* 0x00 = */ 'a',
     /* 0x01 = */ 's',
@@ -62,7 +63,7 @@ static uint16_t adb_keycode_to_arduino_hid[128] = {
     /* 0x36 = */ KEY_LEFT_CTRL,
     /* 0x37 = */ KEY_LEFT_GUI,
     /* 0x38 = */ KEY_LEFT_SHIFT,
-    /* 0x39 = */ KEY_CAPSLOCK,
+    /* 0x39 = */ KEY_CAPS_LOCK,
     /* 0x3a = */ KEY_LEFT_ALT,
     /* 0x3b = */ KEY_LEFT_ARROW,
     /* 0x3c = */ KEY_RIGHT_ARROW,
@@ -86,7 +87,7 @@ static uint16_t adb_keycode_to_arduino_hid[128] = {
     /* 0x4e = */ KEY_KP_MINUS,
     /* 0x4f = */ 0,
     /* 0x50 = */ 0,
-    /* 0x51 = */ KEY_KP_EQUAL,
+    /* 0x51 = */ '=', //  KEY_KP_EQUAL (not on Windows),
     /* 0x52 = */ KEY_KP_0,
     /* 0x53 = */ KEY_KP_1,
     /* 0x54 = */ KEY_KP_2,
@@ -108,17 +109,17 @@ static uint16_t adb_keycode_to_arduino_hid[128] = {
     /* 0x64 = */ KEY_F8,
     /* 0x65 = */ KEY_F9,
     /* 0x66 = */ 0,
-    /* 0x67 = */ KEY_VOLUME_DOWN, //KEY_F11,
+    /* 0x67 = */ KEY_F11, //KEY_VOLUME_DOWN, //KEY_F11,
     /* 0x68 = */ 0,
-    /* 0x69 = */ KEY_F13,
+    /* 0x69 = */ KEY_PRINT_SCREEN, //KEY_F13,
     /* 0x6a = */ 0,
-    /* 0x6b = */ KEY_F14,
+    /* 0x6b = */ KEY_SCROLL_LOCK, // KEY_F14
     /* 0x6c = */ 0,
-    /* 0x6d = */ KEY_MUTE, //KEY_F10,
+    /* 0x6d = */ KEY_F10, //KEY_MUTE, //KEY_F10,
     /* 0x6e = */ 0,
-    /* 0x6f = */ KEY_VOLUME_UP, //KEY_F12,
+    /* 0x6f = */ KEY_F12, //KEY_VOLUME_UP, //KEY_F12,
     /* 0x70 = */ 0,
-    /* 0x71 = */ KEY_F15,
+    /* 0x71 = */ KEY_PAUSE, // KEY_F15,
     /* 0x72 = */ KEY_INSERT, // or KEY_INSERT
     /* 0x73 = */ KEY_HOME,
     /* 0x74 = */ KEY_PAGE_UP,

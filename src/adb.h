@@ -7,6 +7,9 @@
 
 #define us_to_cycles(cycles) (uint32_t)((uint64_t)(cycles) * SystemCoreClock / 1000000ul)
 #define delay_microseconds(us) do { DWT->CYCCNT = 0; while (DWT->CYCCNT < us_to_cycles(us)); } while(0)
+#define delay_microseconds_no_clock_reset(us) do { uint32_t startTime = DWT->CYCCNT; while (DWT->CYCCNT - startTime < us_to_cycles(us)); } while(0)
+#define cli()     nvic_globalirq_disable()
+#define sei()     nvic_globalirq_enable()
 
 #define ADB_DATA_PIN        PB13
 #define ADB_DATA_PORT       GPIOB
@@ -91,8 +94,11 @@ static void adb_write_data_packet(uint16_t bits, uint8_t length) {
 static bool adb_stop_bit_srq_listen() {
     adb_write_bit(0);
     // TODO: Properly handle SRQ, currently waits it out:
+    // add a delay before that?
     DWT->CYCCNT = 0;
-    while (ADB_READ() == LOW && DWT->CYCCNT < us_to_cycles(300 - 35)) ; 
+    while (ADB_READ() == LOW && DWT->CYCCNT < us_to_cycles(300 - 35)) {
+        //delay_microseconds_no_clock_reset(5); 
+    }
     return false;
 }
 
@@ -112,7 +118,9 @@ static bool adb_wait_tlt(bool response_expected) {
     delay_microseconds(140);
 
     DWT->CYCCNT = 0;    
-    while (ADB_READ() == HIGH && DWT->CYCCNT < us_to_cycles(260) && response_expected) ;
+    while (ADB_READ() == HIGH && DWT->CYCCNT < us_to_cycles(260-140) && response_expected) {
+        //delay_microseconds_no_clock_reset(1);            
+    }
     
     return true;
 }
@@ -126,8 +134,9 @@ static uint8_t adb_read_bit() {
         // if this time is exceeded assume timeout
         if (DWT->CYCCNT > us_to_cycles(85))
             return ADB_BIT_ERROR;
+        //delay_microseconds_no_clock_reset(2);            
     }
-    auto low_time = DWT->CYCCNT;
+    uint32_t low_time = DWT->CYCCNT;
 
     DWT->CYCCNT = 0;
 
@@ -136,8 +145,9 @@ static uint8_t adb_read_bit() {
         // if this time is exceeded assume timeout
         if (DWT->CYCCNT > us_to_cycles(85))
             return ADB_BIT_ERROR;
+        //delay_microseconds_no_clock_reset(2);            
     }
-    auto high_time = DWT->CYCCNT;
+    uint32_t high_time = DWT->CYCCNT;
     
     return (low_time < high_time) ? 0x1 : 0x0;
 }
@@ -160,8 +170,10 @@ bool adb_read_data_packet(uint16_t* buffer, uint8_t length)
         *buffer |= current_bit;
     }
 
-    /* uint8_t stop_bit = */ adb_read_bit(); // should equal to '0'
-    return true;
+    uint8_t stop_bit = adb_read_bit();
+    //if (stop_bit !=0) return false;
+    // TODO should equal to '0' --- but doesn't!
+    return true;;
 }
 
 void adb_init() {
