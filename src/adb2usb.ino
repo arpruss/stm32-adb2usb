@@ -5,6 +5,7 @@
 #include "adb_devices.h"
 #include "keymap.h"
 
+#undef DEBUG
 
 #define POLL_DELAY    5
 
@@ -12,7 +13,9 @@
 USBHID HID;
 HIDKeyboard Keyboard(HID);
 HIDMouse Mouse(HID); 
+#ifdef DEBUG
 USBCompositeSerial CompositeSerial;
+#endif
 
 bool capsLock = false;
 bool apple_extended_detected = false;
@@ -24,8 +27,12 @@ void setup() {
     // Turn the led on at the beginning of setup
     pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);
-    
+
+#ifdef DEBUG
     HID.begin(CompositeSerial, HID_KEYBOARD_MOUSE);
+#else    
+    HID.begin(HID_KEYBOARD_MOUSE);
+#endif    
     while(!USBComposite);
 
     // Set up HID
@@ -111,8 +118,9 @@ void keyboard_handler() {
 
     if (error) return;  // don't continue changing the hid report if there was
                         // an error reading from ADB – most often it's a timeout
-
+#ifdef DEBUG
     CompositeSerial.println(key_press.raw,HEX);
+#endif    
 
     if (key_press.raw == ADB_KEY_POWER_DOWN) {
       Keyboard.press(KEY_MUTE);

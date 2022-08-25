@@ -152,6 +152,31 @@ static uint8_t adb_read_bit() {
     return (low_time < high_time) ? 0x1 : 0x0;
 }
 
+// Read a single bit from the bus.
+static bool adb_read_stop_bit() {
+    DWT->CYCCNT = 0;
+    
+    while (ADB_READ() == LOW) {
+        // devices need to stick to 30% precision, 65 * 1.3 = 85 μs
+        // if this time is exceeded assume timeout
+        if (DWT->CYCCNT > us_to_cycles(85))
+            return false;
+    }
+    uint32_t low_time = DWT->CYCCNT;
+
+    DWT->CYCCNT = 0;
+
+    while (ADB_READ() == HIGH) {
+        // devices need to stick to 30% precision, 35 * 1.3 = 46 μs
+        // if this time is exceeded assume timeout
+        if (DWT->CYCCNT > us_to_cycles(46))
+            break;
+    }
+    uint32_t high_time = DWT->CYCCNT;
+
+    return low_time >= us_to_cycles(50);
+}
+
 // Read `length` bits from the bus into `buffer`.
 bool adb_read_data_packet(uint16_t* buffer, uint8_t length)
 {   
@@ -170,10 +195,7 @@ bool adb_read_data_packet(uint16_t* buffer, uint8_t length)
         *buffer |= current_bit;
     }
 
-    uint8_t stop_bit = adb_read_bit();
-    //if (stop_bit !=0) return false;
-    // TODO should equal to '0' --- but doesn't!
-    return true;;
+    return adb_read_stop_bit();
 }
 
 void adb_init() {
