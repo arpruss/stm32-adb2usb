@@ -1,6 +1,6 @@
 #include <USBComposite.h>
 #include <USBHID.h>
-//#include "hid_keyboard.h"
+//#include "hid_kb->h"
 #include "adb_structures.h"
 #include "adb_devices.h"
 #include "keymap.h"
@@ -12,6 +12,8 @@
 #define LED PB12  
 USBHID HID;
 HIDKeyboard Keyboard(HID);
+HIDKeyboard BootKeyboard(HID, 0);
+HIDKeyboard* kb;
 HIDMouse Mouse(HID); 
 #ifdef DEBUG
 USBCompositeSerial CompositeSerial;
@@ -27,16 +29,6 @@ void setup() {
     // Turn the led on at the beginning of setup
     pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);
-
-#ifdef DEBUG
-    HID.begin(CompositeSerial, HID_KEYBOARD_MOUSE);
-#else    
-    HID.begin(HID_KEYBOARD_MOUSE);
-#endif    
-    while(!USBComposite);
-
-    // Set up HID
-    //hid_keyboard_init();
 
     digitalWrite(LED,HIGH);
     // Set up the ADB bus
@@ -74,9 +66,24 @@ void setup() {
       if (!error) mouse_present = true;
     } while(!keyboard_present && !mouse_present);
 
+    const HIDReportDescriptor* d = 
+      (keyboard_present && mouse_present) ? HID_KEYBOARD_MOUSE :
+      keyboard_present ? HID_BOOT_KEYBOARD : HID_MOUSE;
+#ifdef DEBUG
+    HID.begin(CompositeSerial, d);
+#else    
+    HID.begin(d);
+#endif
+
+    while(!USBComposite);
+
     if (keyboard_present) {
-      Keyboard.begin();
-      Keyboard.setAdjustForHostCapsLock(false);
+      if (mouse_present)
+        kb = &Keyboard;
+      else
+        kb = &BootKeyboard;
+      kb->begin();
+      kb->setAdjustForHostCapsLock(false);
     }
 
     // Set-up successful, turn of the LED
@@ -88,16 +95,16 @@ void handleKey(uint8_t key, bool released) {
       uint16_t k = adb_keycode_to_arduino_hid[key];
       if (k) {
         if (released)
-          Keyboard.release(k);
+          kb->release(k);
         else
-          Keyboard.press(k);
+          kb->press(k);
       }
     }
     else {
       if (capsLock == released) {
-        Keyboard.press(KEY_CAPS_LOCK);
+        kb->press(KEY_CAPS_LOCK);
         delay(80);
-        Keyboard.release(KEY_CAPS_LOCK);
+        kb->release(KEY_CAPS_LOCK);
         capsLock = !released;        
       }
     }
@@ -112,7 +119,7 @@ void keyboard_handler() {
     if (key_press.raw==0)return;
     char s[256];
     sprintf(s,"%x:%02x %x:%02x", key_press.data.released0, key_press.data.key0, key_press.data.released1, key_press.data.key1);
-    Keyboard.println(s);
+    kb->println(s);
     return;
 #endif    
 
@@ -123,10 +130,10 @@ void keyboard_handler() {
 #endif    
 
     if (key_press.raw == ADB_KEY_POWER_DOWN) {
-      Keyboard.press(KEY_MUTE);
+      kb->press(KEY_MUTE);
     }
     else if (key_press.raw == ADB_KEY_POWER_UP) {
-      Keyboard.release(KEY_MUTE);
+      kb->release(KEY_MUTE);
     }
     else {
       handleKey(key_press.data.key0, key_press.data.released0);
@@ -158,7 +165,7 @@ void mouse_handler() {
 }
 
 void led_handler() {
-    uint8_t leds = Keyboard.getLEDs();
+    uint8_t leds = kb->getLEDs();
 
     if (leds != lastLEDs) {
       adb_keyboard_write_leds((leds & 4) != 0, (leds & 2) != 0, leds & 1);
