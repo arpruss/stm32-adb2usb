@@ -9,7 +9,8 @@
 
 #define POLL_DELAY    5
 
-#define LED PB12  
+#define LED PC13 // blue pill
+//#define LED PB12 // black pill
 USBHID HID;
 HIDKeyboard Keyboard(HID);
 HIDKeyboard BootKeyboard(HID, 0);
@@ -25,8 +26,24 @@ bool keyboard_present = false, mouse_present = false;
 
 uint8_t lastLEDs = 0xFF;
 
+const uint32_t flourishPause = 40;
+
+void flourish() {
+  adb_keyboard_write_leds(false,false,true);
+  delay(flourishPause);
+  adb_keyboard_write_leds(false,true,false);
+  delay(flourishPause);
+  adb_keyboard_write_leds(true,false,false);
+  delay(flourishPause);
+  adb_keyboard_write_leds(false,true,false);
+  delay(flourishPause);
+  adb_keyboard_write_leds(false,false,true);
+  delay(flourishPause);
+  adb_keyboard_write_leds(false,false,false);
+}
+
 void setup() {
-    // Turn the led on at the beginning of setup
+    // Turn the led off at the beginning of setup
     pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);
 
@@ -48,7 +65,7 @@ void setup() {
           mask.data.device_handler_id = 0xFF;
           apple_extended_detected = adb_device_update_register3(ADB_ADDR_KEYBOARD, reg3, mask.raw, &error);
           delay(20);
-      } while(error && millis() < t0+2000);
+      } while(error && millis() < t0+1000);
       if (!error) keyboard_present = true;
   
       t0 = millis();
@@ -62,7 +79,7 @@ void setup() {
         mask.data.device_handler_id = 0xFF;
         adb_device_update_register3(ADB_ADDR_MOUSE, reg3, mask.raw, &error);
         delay(20);
-      } while(error && millis() < t0+2000);
+      } while(error && millis() < t0+1000);
       if (!error) mouse_present = true;
     } while(!keyboard_present && !mouse_present);
 
@@ -86,7 +103,9 @@ void setup() {
       kb->setAdjustForHostCapsLock(false);
     }
 
-    // Set-up successful, turn of the LED
+    // Set-up successful, turn on the LED
+    if (keyboard_present)
+      flourish();
     digitalWrite(LED, LOW);
 }
 

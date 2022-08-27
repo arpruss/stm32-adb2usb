@@ -11,9 +11,9 @@
 #define cli()     nvic_globalirq_disable()
 #define sei()     nvic_globalirq_enable()
 
-#define ADB_DATA_PIN        PB13
+#define ADB_DATA_PIN        PB8
 #define ADB_DATA_PORT       GPIOB
-#define ADB_DATA_PIN_NO     13
+#define ADB_DATA_PIN_NO     8
 #define ADB_WRITE(bit)      gpio_write_bit(ADB_DATA_PORT, ADB_DATA_PIN_NO, (bit))
 #define ADB_READ()          (0!=gpio_read_bit(ADB_DATA_PORT, ADB_DATA_PIN_NO))
 
