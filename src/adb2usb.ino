@@ -6,6 +6,7 @@
 #include "keymap.h"
 
 #undef DEBUG
+#define POWER_EMULATES_RIGHT_MOUSE
 
 #define POLL_DELAY    5
 
@@ -148,6 +149,14 @@ void keyboard_handler() {
     CompositeSerial.println(key_press.raw,HEX);
 #endif    
 
+#ifdef POWER_EMULATES_RIGHT_MOUSE
+    if (mouse_present) {
+      if (key_press.raw == ADB_KEY_POWER_DOWN)
+        Mouse.press(MOUSE_RIGHT);
+      else if (key_press.raw == ADB_KEY_POWER_UP)
+        Mouse.release(MOUSE_RIGHT);
+    }
+#endif    
     if (key_press.raw == ADB_KEY_POWER_DOWN) {
       kb->press(KEY_MUTE);
     }
